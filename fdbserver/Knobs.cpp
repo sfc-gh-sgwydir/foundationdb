@@ -533,7 +533,7 @@ void ServerKnobs::initialize(bool randomize, ClientKnobs* clientKnobs, bool isSi
 	init( STORAGE_COMMIT_BYTES,                             10000000 ); if( randomize && BUGGIFY ) STORAGE_COMMIT_BYTES = 2000000;
 	init( STORAGE_DURABILITY_LAG_REJECT_THRESHOLD,              0.25 );
 	init( STORAGE_DURABILITY_LAG_MIN_RATE,                       0.1 );
-	init( STORAGE_COMMIT_INTERVAL,                               0.5 ); if( randomize && BUGGIFY ) STORAGE_COMMIT_INTERVAL = 2.0; else if ( randomize && BUGGIFY ) STORAGE_COMMIT_INTERVAL = 0.02;
+	init( STORAGE_COMMIT_INTERVAL,                               0.5 ); if( randomize && BUGGIFY ) STORAGE_COMMIT_INTERVAL = 2.0; else if ( randomize && BUGGIFY ) STORAGE_COMMIT_INTERVAL = 0.01;
 	init( UPDATE_SHARD_VERSION_INTERVAL,                        0.25 ); if( randomize && BUGGIFY ) UPDATE_SHARD_VERSION_INTERVAL = 1.0;
 	init( BYTE_SAMPLING_FACTOR,                                  250 ); //cannot buggify because of differences in restarting tests
 	init( BYTE_SAMPLING_OVERHEAD,                                100 );
