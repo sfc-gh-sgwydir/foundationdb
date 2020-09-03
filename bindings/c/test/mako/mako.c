@@ -1193,7 +1193,7 @@ int init_args(mako_args_t* args) {
 	args->rows = 100000;
 	args->seconds = 30;
 	args->iteration = 0;
-	args->tpsmax = 0;
+	args->tpsmax = -1;
 	args->tpsmin = -1;
 	args->tpsinterval = 10;
 	args->tpschange = TPS_SIN;
