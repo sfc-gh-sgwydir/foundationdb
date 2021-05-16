@@ -4264,7 +4264,7 @@ private:
 
 	// Try to evict a BTree page from the pager cache.
 	// Returns true if, at the end of the call, the page is no longer in cache,
-	// so the caller can assume its IPage reference is the only one.
+	// so the caller can assume its ArenaPage reference is the only one.
 	bool tryEvictPage(IPagerSnapshot* pager, BTreePageIDRef id) {
 		// If it's an oversized page, currently it cannot be in the cache
 		if (id.size() > 0) {
