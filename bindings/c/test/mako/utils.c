@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* uniform-distribution random */
 int urand(int low, int high) {
@@ -67,14 +68,19 @@ int digits(int num) {
 }
 
 /* generate a key for a given key number */
+/* prefix is "mako" by default, prefixpadding = 1 means 'x' will be in front rather than trailing the keyname */
 /* len is the buffer size, key length + null */
-void genkey(char* str, int num, int rows, int len) {
-	int i;
+void genkey(char* str, char* prefix, int prefixlen, int prefixpadding, int num, int rows, int len) {
 	int rowdigit = digits(rows);
-	sprintf(str, KEYPREFIX "%0.*d", rowdigit, num);
-	for (i = (KEYPREFIXLEN + rowdigit); i < len - 1; i++) {
-		str[i] = 'x';
+	int paddinglen = len - (prefixlen + rowdigit) - 1;
+	int prefixoffset = 0;
+	int paddingoffset = prefixlen + rowdigit;
+	if (prefixpadding) {
+		prefixoffset = paddinglen;
+		paddingoffset = 0;
 	}
+	sprintf(str + prefixoffset, "%s%0.*d", prefix, rowdigit, num);
+	memset(str + paddingoffset, 'x', paddinglen);
 	str[len - 1] = '\0';
 }
 

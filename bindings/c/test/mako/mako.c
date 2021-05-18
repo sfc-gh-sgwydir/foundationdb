@@ -151,18 +151,36 @@ void* fdb_network_thread(void* args) {
 	return 0;
 }
 
+void genprefix(char* str, char* prefix, int prefixlen, int prefixpadding, int rows, int len) {
+	int rowdigit = digits(rows);
+	int paddinglen = len - (prefixlen + rowdigit) - 1;
+	if (prefixpadding) {
+		memset(str, 'x', paddinglen);
+	} else {
+		sprintf(str, "%s", prefix);
+	}
+	str[len - 1] = '\0';
+}
+
 /* cleanup database */
 int cleanup(FDBTransaction* transaction, mako_args_t* args) {
 	struct timespec timer_start, timer_end;
-	char beginstr[7];
-	char endstr[7];
+	char* prefixstr = (char*)malloc(sizeof(char) * args->key_length + 1);
+	if (!prefixstr)
+		return -1;
+	char* beginstr = (char*)malloc(sizeof(char) * args->key_length + 1);
+	if (!beginstr)
+		return -1;
+	char* endstr = (char*)malloc(sizeof(char) * args->key_length + 1);
+	if (!endstr)
+		return -1;
 
-	strncpy(beginstr, "mako", 4);
-	beginstr[4] = 0x00;
-	strncpy(endstr, "mako", 4);
-	endstr[4] = 0xff;
+	genprefix(prefixstr, KEYPREFIX, KEYPREFIXLEN, args->prefixpadding, args->rows, args->key_length + 1);
+	int len = sprintf(beginstr, "%s%c", prefixstr, 0x00);
+	sprintf(endstr, "%s%c", prefixstr, 0xff);
+
 	clock_gettime(CLOCK_MONOTONIC_COARSE, &timer_start);
-	fdb_transaction_clear_range(transaction, (uint8_t*)beginstr, 5, (uint8_t*)endstr, 5);
+	fdb_transaction_clear_range(transaction, (uint8_t*)beginstr, len + 1, (uint8_t*)endstr, len + 1);
 	if (commit_transaction(transaction) != FDB_SUCCESS)
 		goto failExit;
 
@@ -220,7 +238,7 @@ int populate(FDBTransaction* transaction,
 	for (i = begin; i <= end; i++) {
 
 		/* sequential keys */
-		genkey(keystr, i, args->rows, args->key_length + 1);
+		genkey(keystr, KEYPREFIX, KEYPREFIXLEN, args->prefixpadding, i, args->rows, args->key_length + 1);
 		/* random values */
 		randstr(valstr, args->value_length + 1);
 
@@ -512,7 +530,7 @@ retryTxn:
 				} else {
 					keynum = urand(0, args->rows - 1);
 				}
-				genkey(keystr, keynum, args->rows, args->key_length + 1);
+				genkey(keystr, KEYPREFIX, KEYPREFIXLEN, args->prefixpadding, keynum, args->rows, args->key_length + 1);
 
 				/* range */
 				if (args->txnspec.ops[i][OP_RANGE] > 0) {
@@ -520,7 +538,7 @@ retryTxn:
 					if (keyend > args->rows - 1) {
 						keyend = args->rows - 1;
 					}
-					genkey(keystr2, keyend, args->rows, args->key_length + 1);
+				    genkey(keystr2, KEYPREFIX, KEYPREFIXLEN, args->prefixpadding, keyend, args->rows, args->key_length + 1);
 				}
 
 				if (stats->xacts % args->sampling == 0) {
@@ -1345,6 +1363,8 @@ int init_args(mako_args_t* args) {
 	args->verbose = 1;
 	args->flatbuffers = 0; /* internal */
 	args->knobs[0] = '\0';
+	args->log_group[0] = '\0';
+	args->prefixpadding = 0;
 	args->trace = 0;
 	args->tracepath[0] = '\0';
 	args->traceformat = 0; /* default to client's default (XML) */
@@ -1505,6 +1525,7 @@ void usage() {
 	printf("%-24s %s\n", "-m, --mode=MODE", "Specify the mode (build, run, clean)");
 	printf("%-24s %s\n", "-z, --zipf", "Use zipfian distribution instead of uniform distribution");
 	printf("%-24s %s\n", "    --commitget", "Commit GETs");
+	printf("%-24s %s\n", "    --prefix_padding", "Pad key by prefixing data (Default: postfix padding)");
 	printf("%-24s %s\n", "    --trace", "Enable tracing");
 	printf("%-24s %s\n", "    --tracepath=PATH", "Set trace file path");
 	printf("%-24s %s\n", "    --trace_format <xml|json>", "Set trace format (Default: json)");
@@ -1556,6 +1577,7 @@ int parse_args(int argc, char* argv[], mako_args_t* args) {
 			                                    { "zipf", no_argument, NULL, 'z' },
 			                                    { "commitget", no_argument, NULL, ARG_COMMITGET },
 			                                    { "flatbuffers", no_argument, NULL, ARG_FLATBUFFERS },
+			                                    { "prefix_padding", no_argument, NULL, ARG_PREFIXPADDING },
 			                                    { "trace", no_argument, NULL, ARG_TRACE },
 			                                    { "txntagging", required_argument, NULL, ARG_TXNTAGGING },
 			                                    { "txntagging_prefix", required_argument, NULL, ARG_TXNTAGGINGPREFIX },
@@ -1655,6 +1677,12 @@ int parse_args(int argc, char* argv[], mako_args_t* args) {
 			break;
 		case ARG_KNOBS:
 			memcpy(args->knobs, optarg, strlen(optarg) + 1);
+			break;
+		case ARG_LOGGROUP:
+			memcpy(args->log_group, optarg, strlen(optarg) + 1);
+			break;
+		case ARG_PREFIXPADDING:
+			args->prefixpadding = 1;
 			break;
 		case ARG_TRACE:
 			args->trace = 1;
